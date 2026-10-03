@@ -22,3 +22,331 @@ model LogoSettings {
   encrypt           Boolean  @default(false)
   updatedAt         DateTime @updatedAt
 }
+
+// ─────────────────────────────────────────────────────────────
+// TASLAK — firma görüşmesinden sonra netleşecek
+// ─────────────────────────────────────────────────────────────
+
+// ── Kişiler ──────────────────────────────────────────────────
+
+// LOGO cari kartının yerel kopyası. LOGO kapalıyken de uygulama çalışsın diye
+// temel alanlar saklanır ve periyodik senkronla güncellenir.
+// logoRef boş olabilir: LOGO'da henüz kaydı olmayan yeni müşteri.
+model Customer {
+  id        Int       @id @default(autoincrement())
+  logoRef   Int?      @unique // LG_xxx_CLCARD.LOGICALREF
+  logoCode  String? // LG_xxx_CLCARD.CODE
+  name      String
+  isPerson  Boolean   @default(true)
+  tckn      String?
+  taxNr     String?
+  taxOffice String?
+  phone     String?
+  email     String?
+  city      String?
+  active    Boolean   @default(true)
+  note      String?
+  syncedAt  DateTime? // LOGO'dan son güncelleme
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  vehicles     Vehicle[]
+  tireSets     TireSet[]
+  appointments Appointment[]
+
+  @@index([name])
+  @@index([phone])
+}
+
+enum EmployeeSource {
+  LOGO_SALESMAN // LG_SLSMAN
+  LOGO_PERSONNEL // LH_xxx_PERSON (Bordro Plus)
+  LOCAL // uygulamada tanımlanan
+}
+
+model Employee {
+  id        Int            @id @default(autoincrement())
+  source    EmployeeSource @default(LOCAL)
+  logoRef   Int?
+  code      String?
+  name      String
+  phone     String?
+  active    Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  user      User?
+  checkIns  Stay[]         @relation("StayCheckIn")
+  checkOuts Stay[]         @relation("StayCheckOut")
+  movements TireMovement[]
+
+  @@unique([source, logoRef])
+}
+
+enum UserRole {
+  ADMIN // ayarlar, kullanıcılar
+  MANAGER // raporlar, fiyat
+  STAFF // giriş/çıkış işlemleri
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  username     String    @unique
+  passwordHash String
+  role         UserRole  @default(STAFF)
+  active       Boolean   @default(true)
+  lastLoginAt  DateTime?
+  employeeId   Int?      @unique
+  employee     Employee? @relation(fields: [employeeId], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+// ── Depo ─────────────────────────────────────────────────────
+
+model Branch {
+  id         Int         @id @default(autoincrement())
+  code       String      @unique
+  name       String
+  address    String?
+  active     Boolean     @default(true)
+  warehouses Warehouse[]
+}
+
+model Warehouse {
+  id        Int               @id @default(autoincrement())
+  branchId  Int
+  branch    Branch            @relation(fields: [branchId], references: [id])
+  code      String
+  name      String
+  active    Boolean           @default(true)
+  locations StorageLocation[]
+
+  @@unique([branchId, code])
+}
+
+// Rafın tek gözü. code etikette yazan adres: örn. "A-03-2" (koridor-raf-kat)
+model StorageLocation {
+  id          Int       @id @default(autoincrement())
+  warehouseId Int
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  code        String
+  aisle       String? // koridor / bölüm
+  rack        String? // raf
+  level       String? // kat
+  capacity    Int       @default(1) // kaç set sığar
+  active      Boolean   @default(true)
+  note        String?
+
+  tireSets      TireSet[]
+  movementsFrom TireMovement[] @relation("MovementFrom")
+  movementsTo   TireMovement[] @relation("MovementTo")
+
+  @@unique([warehouseId, code])
+}
+
+// ── Araç ve lastik ───────────────────────────────────────────
+
+model Vehicle {
+  id         Int      @id @default(autoincrement())
+  customerId Int
+  customer   Customer @relation(fields: [customerId], references: [id])
+  plate      String   @unique // boşluksuz, büyük harf: 34ABC123
+  brand      String?
+  model      String?
+  year       Int?
+  note       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tireSets     TireSet[]
+  appointments Appointment[]
+
+  @@index([customerId])
+}
+
+enum Season {
+  SUMMER
+  WINTER
+  ALL_SEASON
+}
+
+enum TireSetStatus {
+  IN_STORAGE // depoda
+  DELIVERED // müşteriye teslim edildi
+  DISPOSED // müşteri onayıyla hurdaya ayrıldı
+}
+
+enum RimType {
+  NONE // jantsız
+  STEEL
+  ALLOY
+}
+
+// Depoya giren bir lastik takımı. code QR/barkod etiketinde basılan numara.
+model TireSet {
+  id                Int              @id @default(autoincrement())
+  code              String           @unique // örn. LP-2026-000123
+  customerId        Int
+  customer          Customer         @relation(fields: [customerId], references: [id])
+  vehicleId         Int?
+  vehicle           Vehicle?         @relation(fields: [vehicleId], references: [id])
+  season            Season
+  status            TireSetStatus    @default(IN_STORAGE)
+  rimType           RimType          @default(NONE)
+  quantity          Int              @default(4)
+  hasHubcaps        Boolean          @default(false)
+  hasBolts          Boolean          @default(false) // bijon
+  currentLocationId Int?
+  currentLocation   StorageLocation? @relation(fields: [currentLocationId], references: [id])
+  note              String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  tires        Tire[]
+  stays        Stay[]
+  movements    TireMovement[]
+  photos       TirePhoto[]
+  appointments Appointment[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([currentLocationId])
+}
+
+enum TirePosition {
+  FRONT_LEFT
+  FRONT_RIGHT
+  REAR_LEFT
+  REAR_RIGHT
+  SPARE
+  OTHER
+}
+
+enum TireCondition {
+  GOOD
+  WORN // diş derinliği düşük
+  DAMAGED // yanak hasarı, patlak vb.
+}
+
+// Takımdaki tek lastik. Ön/arka farklı ebatlı araçlar için lastik bazında tutulur.
+// Ebat örneği 205/55 R16 91V → width 205, aspectRatio 55, rimDiameter 16, loadIndex 91, speedIndex V
+model Tire {
+  id           Int           @id @default(autoincrement())
+  tireSetId    Int
+  tireSet      TireSet       @relation(fields: [tireSetId], references: [id], onDelete: Cascade)
+  position     TirePosition
+  brand        String
+  pattern      String? // desen / model adı
+  width        Int
+  aspectRatio  Int
+  rimDiameter  Decimal       @db.Decimal(4, 1)
+  loadIndex    Int?
+  speedIndex   String?
+  dot          String? // üretim haftası+yılı, örn. "2423"
+  treadDepthMm Decimal?      @db.Decimal(3, 1) // ölçülen diş derinliği
+  condition    TireCondition @default(GOOD)
+  note         String?
+
+  @@index([tireSetId])
+}
+
+// ── İşlemler ─────────────────────────────────────────────────
+
+// Bir konaklama dönemi: depoya giriş → teslim. Ücret ve fatura bu kayda bağlanır.
+model Stay {
+  id             Int       @id @default(autoincrement())
+  tireSetId      Int
+  tireSet        TireSet   @relation(fields: [tireSetId], references: [id])
+  seasonLabel    String? // örn. "2026-2027 Kış"
+  checkInAt      DateTime  @default(now())
+  checkInById    Int?
+  checkInBy      Employee? @relation("StayCheckIn", fields: [checkInById], references: [id])
+  mileageKm      Int? // giriş anındaki araç km
+  checkOutAt     DateTime?
+  checkOutById   Int?
+  checkOutBy     Employee? @relation("StayCheckOut", fields: [checkOutById], references: [id])
+  price          Decimal?  @db.Decimal(12, 2)
+  currency       String    @default("TRY")
+  paid           Boolean   @default(false)
+  logoInvoiceRef Int? // LOGO'da kesilen faturanın referansı (ileride)
+  note           String?
+
+  photos TirePhoto[]
+
+  @@index([tireSetId])
+  @@index([checkOutAt])
+}
+
+enum MovementType {
+  CHECK_IN
+  RELOCATE // raf değişikliği
+  CHECK_OUT
+}
+
+// Denetim izi: lastik takımı ne zaman, kim tarafından, hangi gözden hangisine taşındı
+model TireMovement {
+  id             Int              @id @default(autoincrement())
+  tireSetId      Int
+  tireSet        TireSet          @relation(fields: [tireSetId], references: [id])
+  type           MovementType
+  fromLocationId Int?
+  fromLocation   StorageLocation? @relation("MovementFrom", fields: [fromLocationId], references: [id])
+  toLocationId   Int?
+  toLocation     StorageLocation? @relation("MovementTo", fields: [toLocationId], references: [id])
+  employeeId     Int?
+  employee       Employee?        @relation(fields: [employeeId], references: [id])
+  at             DateTime         @default(now())
+  note           String?
+
+  @@index([tireSetId, at])
+}
+
+enum PhotoKind {
+  CHECK_IN
+  CHECK_OUT
+  DAMAGE
+}
+
+model TirePhoto {
+  id        Int       @id @default(autoincrement())
+  tireSetId Int
+  tireSet   TireSet   @relation(fields: [tireSetId], references: [id], onDelete: Cascade)
+  stayId    Int?
+  stay      Stay?     @relation(fields: [stayId], references: [id])
+  kind      PhotoKind
+  path      String // dosya depolama yolu
+  takenAt   DateTime  @default(now())
+
+  @@index([tireSetId])
+}
+
+enum AppointmentType {
+  CHECK_IN // lastik bırakma
+  SWAP // sezon değişimi: depodakini tak, araçtakini depola
+  CHECK_OUT // sadece teslim alma
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  DONE
+  CANCELLED
+  NO_SHOW
+}
+
+model Appointment {
+  id          Int               @id @default(autoincrement())
+  customerId  Int
+  customer    Customer          @relation(fields: [customerId], references: [id])
+  vehicleId   Int?
+  vehicle     Vehicle?          @relation(fields: [vehicleId], references: [id])
+  tireSetId   Int?
+  tireSet     TireSet?          @relation(fields: [tireSetId], references: [id])
+  type        AppointmentType
+  status      AppointmentStatus @default(SCHEDULED)
+  scheduledAt DateTime
+  note        String?
+  createdAt   DateTime          @default(now())
+
+  @@index([scheduledAt])
+}

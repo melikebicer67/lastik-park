@@ -11,6 +11,8 @@ web (Next.js :3000)  ──►  api (NestJS :3001)
                                   └── demo/üretim: firmanın gerçek LOGO sunucusu
 ```
 
+Veri modeli taslağı ve firmaya sorulacaklar: [docs/veri-modeli.md](docs/veri-modeli.md)
+
 ## Gereksinimler
 
 - Node 22 (`nvm use`)
