@@ -1,20 +1,26 @@
 @import "tailwindcss";
 
+/* LastikPark kurumsal renkleri (lastikpark.com.tr) */
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #1a1a1a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --color-brand: #e30512; /* butonlar, vurgular: beyaz yazıyla okunaklı */
+  --color-brand-bright: #ff0000; /* üst bar, sitedeki ana kırmızı */
+  --color-brand-dark: #b8040e; /* hover */
+  --color-ink: #252525; /* bayi paneli antrasiti */
+  --color-mist: #ededed;
+  --font-sans: var(--font-montserrat);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #121212;
     --foreground: #ededed;
   }
 }

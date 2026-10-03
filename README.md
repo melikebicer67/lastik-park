@@ -21,20 +21,38 @@ Veri modeli taslağı ve firmaya sorulacaklar: [docs/veri-modeli.md](docs/veri-m
 ## Kurulum
 
 ```bash
+nvm use                         # Node 22
+
 # 1. Veritabanları
 podman-compose up -d            # docker compose up -d
 
 # 2. Sahte LOGO veritabanı (LOGO tablo yapısında, Türkçe örnek veri)
 cd logo-demo-db && cp .env.example .env && npm install && npm run seed && cd ..
 
-# 3. API
-cd api && cp .env.example .env && npm install && npm run db:migrate && npm run start:dev
+# 3. API: bağımlılıklar, tablolar, örnek depo (1 şube, 120 göz)
+cd api && cp .env.example .env && npm install && npm run db:migrate && npm run db:seed && cd ..
 
-# 4. Ön yüz (ayrı terminalde)
-cd web && cp .env.example .env.local && npm install && npm run dev
+# 4. Ön yüz
+cd web && cp .env.example .env.local && npm install && cd ..
+
+# (İsteğe bağlı) Demo verisi: 110 müşteri, 160 araç, ~150 lastik takımı. Müşteri/lastik tablolarını sıfırlar!
+cd api && npm run db:demo && cd ..
+
+# 5. Hepsini birlikte çalıştır (kök dizinde)
+npm install && yarn dev         # veya npm run dev
 ```
 
 http://localhost:3000 adresinden açılır.
+
+## Ekranlar
+
+- **Lastik Bul** (`/lastikler`, açılış sayfası): plaka, müşteri, telefon, marka, göz veya etiket no ile arama; durum/mevsim filtresi. Her satırda takımın bulunduğu göz. Etiket numarası yazılıp Enter'a basılınca (el tipi barkod okuyucu da böyle çalışır) doğrudan takıma gider. **QR okut** kamerayla okur (HTTPS veya localhost gerekir).
+- **Lastik Kabul** (`/kabul`): müşteri (LOGO'dan) → araç → lastikler → depo gözü → ücret. Kayıt sonrası QR kodlu etiket sayfasına gider.
+- **Depo** (`/depo`): koridor/raf/kat haritası, mevsime göre renkli; doluluk özeti; haritada plaka/müşteri vurgulama. `?goz=B-04-2` ile gözü işaretler.
+- **Takım detayı** (`/takim/:id`): lastikler, konaklama, teslim alan personel, etiket, "Depoda göster".
+- **Etiketler** (`/etiketler`): depodaki tüm takımların etiketleri; yazdırınca her biri ayrı 100×60 mm sayfa.
+- **Müşteriler**, **Personel**: LOGO'dan canlı okuma.
+- **LOGO Ayarları**: bağlantı bilgileri, test, örnek veriye dönüş.
 
 ## Gerçek LOGO verisine geçmek (demo)
 
@@ -61,3 +79,13 @@ Notlar:
 | GET | `/api/logo/customers/:ref` | Tek cari |
 | GET | `/api/logo/salesmen` | Satış elemanları |
 | GET | `/api/logo/personnel` | Bordro personeli |
+| POST | `/api/customers/from-logo/:logoRef` | LOGO carisini uygulamaya al |
+| GET | `/api/customers/:id` | Müşteri ve araçları |
+| POST | `/api/vehicles` | Araç ekle (plaka doğrulanır) |
+| GET | `/api/storage/warehouses` | Depolar |
+| GET | `/api/storage/warehouses/:id/locations?onlyAvailable=true` | Gözler ve doluluk |
+| GET | `/api/storage/warehouses/:id/map` | Depo haritası ve doluluk |
+| GET | `/api/tire-sets?search=&status=&season=&page=&pageSize=` | Lastik takımı arama |
+| GET | `/api/tire-sets/by-code/:code` | Etiket (QR) numarasından takım |
+| POST | `/api/tire-sets/check-in` | Lastik kabulü |
+| GET | `/api/tire-sets/:id` | Takım detayı |

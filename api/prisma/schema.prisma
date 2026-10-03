@@ -47,6 +47,7 @@ model Customer {
   active    Boolean   @default(true)
   note      String?
   syncedAt  DateTime? // LOGO'dan son güncelleme
+  searchKey String    @default("") // foldSearch(ad, kod, telefon, VKN/TCKN)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 

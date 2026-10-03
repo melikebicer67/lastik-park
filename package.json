@@ -1,0 +1,15 @@
+{
+  "name": "lastik-park",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c blue,green \"npm --prefix api run start:dev\" \"npm --prefix web run dev\"",
+    "db:up": "podman-compose up -d",
+    "db:down": "podman-compose down"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}

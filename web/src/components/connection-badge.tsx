@@ -22,19 +22,21 @@ export function ConnectionBadge() {
   }, []);
 
   if (error) {
-    return <span className="rounded-full bg-red-100 px-3 py-1 text-xs text-red-700">API bağlantısı yok</span>;
+    return <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-brand">API bağlantısı yok</span>;
   }
   if (!settings) return null;
 
   const demo = settings.source === "env";
   return (
     <span
-      className={`rounded-full px-3 py-1 text-xs font-medium ${
-        demo ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
-      }`}
+      className="flex items-center gap-2 whitespace-nowrap rounded-full bg-white px-3 py-1 text-xs font-semibold text-ink"
       title={`${settings.server}/${settings.database}`}
     >
-      {demo ? "Örnek veri" : "LOGO"} · {settings.database} · Firma {settings.firmNo}
+      <span className={`h-2 w-2 rounded-full ${demo ? "bg-amber-400" : "bg-emerald-500"}`} />
+      {demo ? "Örnek veri" : "LOGO"}
+      <span className="hidden sm:inline">
+        · {settings.database} · Firma {settings.firmNo}
+      </span>
     </span>
   );
 }

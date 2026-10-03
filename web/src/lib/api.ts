@@ -84,3 +84,117 @@ export interface LogoPerson {
   lastName: string;
   active: boolean;
 }
+
+export interface Vehicle {
+  id: number;
+  customerId: number;
+  plate: string;
+  brand: string | null;
+  model: string | null;
+  year: number | null;
+}
+
+export interface Customer {
+  id: number;
+  logoRef: number | null;
+  logoCode: string | null;
+  name: string;
+  isPerson: boolean;
+  phone: string | null;
+  email: string | null;
+  city: string | null;
+  vehicles: Vehicle[];
+}
+
+export interface Warehouse {
+  id: number;
+  code: string;
+  name: string;
+  branch: string;
+}
+
+export interface StorageLocation {
+  id: number;
+  code: string;
+  capacity: number;
+  occupied: number;
+}
+
+export type Season = "SUMMER" | "WINTER" | "ALL_SEASON";
+export type RimType = "NONE" | "STEEL" | "ALLOY";
+export type TirePosition = "FRONT_LEFT" | "FRONT_RIGHT" | "REAR_LEFT" | "REAR_RIGHT" | "SPARE" | "OTHER";
+export type TireCondition = "GOOD" | "WORN" | "DAMAGED";
+
+export interface Tire {
+  id: number;
+  position: TirePosition;
+  brand: string;
+  pattern: string | null;
+  width: number;
+  aspectRatio: number;
+  rimDiameter: string;
+  loadIndex: number | null;
+  speedIndex: string | null;
+  dot: string | null;
+  treadDepthMm: string | null;
+  condition: TireCondition;
+}
+
+export interface TireSetDetail {
+  id: number;
+  code: string;
+  season: Season;
+  status: TireSetStatus;
+  rimType: RimType;
+  quantity: number;
+  hasHubcaps: boolean;
+  hasBolts: boolean;
+  note: string | null;
+  createdAt: string;
+  customer: Omit<Customer, "vehicles">;
+  vehicle: Vehicle | null;
+  tires: Tire[];
+  currentLocation: (StorageLocation & { warehouse: { name: string; branch: { name: string } } }) | null;
+  stays: {
+    id: number;
+    checkInAt: string;
+    checkOutAt: string | null;
+    seasonLabel: string | null;
+    mileageKm: number | null;
+    price: string | null;
+    checkInBy: { name: string } | null;
+    checkOutBy: { name: string } | null;
+  }[];
+}
+
+export type TireSetStatus = "IN_STORAGE" | "DELIVERED" | "DISPOSED";
+
+export interface TireSetListItem {
+  id: number;
+  code: string;
+  status: TireSetStatus;
+  season: Season;
+  rimType: RimType;
+  quantity: number;
+  location: string | null;
+  warehouse: string | null;
+  customer: { id: number; name: string; phone: string | null };
+  vehicle: { plate: string; brand: string | null; model: string | null } | null;
+  tire: { brand: string; pattern: string | null; width: number; aspectRatio: number; rimDiameter: string } | null;
+  checkInAt: string;
+  checkOutAt: string | null;
+}
+
+export interface WarehouseMap {
+  warehouse: { id: number; name: string; branch: string };
+  summary: { locations: number; capacity: number; occupied: number; free: number };
+  locations: {
+    id: number;
+    code: string;
+    aisle: string | null;
+    rack: string | null;
+    level: string | null;
+    capacity: number;
+    sets: { id: number; code: string; season: Season; customer: string; plate: string | null }[];
+  }[];
+}

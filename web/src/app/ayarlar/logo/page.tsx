@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { api, ConnectionTestResult, LogoSettings } from "@/lib/api";
+import { dangerButton as danger, input, primaryButton as primary, secondaryButton as secondary } from "@/components/ui/styles";
 
 interface Form {
   server: string;
@@ -222,8 +223,3 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
     </label>
   );
 }
-
-const input = "w-full rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700";
-const primary = "rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900";
-const secondary = "rounded-md border border-zinc-300 px-4 py-2 text-sm disabled:opacity-50 dark:border-zinc-700";
-const danger = "rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50";
