@@ -5,7 +5,7 @@ import { foldSearch } from '../common/search.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { tireSetCode } from './tire-set-code.js';
-import { CheckInDto, TireSetQueryDto } from './tire-sets.dto.js';
+import { CheckInDto, CheckOutDto, TireSetQueryDto } from './tire-sets.dto.js';
 
 const DETAIL_INCLUDE = {
   customer: true,
@@ -15,6 +15,14 @@ const DETAIL_INCLUDE = {
   stays: {
     orderBy: { checkInAt: 'desc' },
     include: { checkInBy: { select: { name: true } }, checkOutBy: { select: { name: true } } },
+  },
+  movements: {
+    orderBy: { at: 'desc' },
+    include: {
+      fromLocation: { select: { code: true } },
+      toLocation: { select: { code: true } },
+      employee: { select: { name: true } },
+    },
   },
 } as const;
 
@@ -84,12 +92,13 @@ export class TireSetsService {
           stays: {
             create: {
               seasonLabel: dto.seasonLabel?.trim() || null,
+              checkInById: dto.checkInById ?? null,
               mileageKm: dto.mileageKm ?? null,
               price: dto.price ?? null,
             },
           },
           movements: {
-            create: { type: 'CHECK_IN', toLocationId: dto.locationId },
+            create: { type: 'CHECK_IN', toLocationId: dto.locationId, employeeId: dto.checkInById ?? null },
           },
         },
       });
@@ -101,6 +110,53 @@ export class TireSetsService {
       return created.id;
     });
 
+    return this.findOne(id);
+  }
+
+  // Lastik teslimi: konaklama kapanır, göz boşalır, hareket kaydı düşülür
+  async checkOut(id: number, dto: CheckOutDto) {
+    await this.prisma.$transaction(async (tx) => {
+      // Aynı takımın iki kez teslim edilmesini önlemek için satır kilitlenir
+      const locked = await tx.$queryRaw<{ status: string; currentLocationId: number | null }[]>`
+        SELECT status, "currentLocationId" FROM "TireSet" WHERE id = ${id} FOR UPDATE`;
+      if (locked.length === 0) throw new NotFoundException('Lastik takımı bulunamadı');
+      if (locked[0].status !== 'IN_STORAGE') {
+        throw new ConflictException('Bu takım depoda değil, daha önce teslim edilmiş');
+      }
+
+      const stay = await tx.stay.findFirst({
+        where: { tireSetId: id, checkOutAt: null },
+        orderBy: { checkInAt: 'desc' },
+      });
+      const now = new Date();
+      if (stay) {
+        const note = [stay.note, dto.note?.trim()].filter(Boolean).join(' / ') || null;
+        await tx.stay.update({
+          where: { id: stay.id },
+          data: {
+            checkOutAt: now,
+            checkOutById: dto.employeeId ?? null,
+            price: stay.price ?? dto.price ?? null,
+            paid: stay.paid || (dto.paid ?? false),
+            note,
+          },
+        });
+      }
+
+      await tx.tireSet.update({
+        where: { id },
+        data: { status: 'DELIVERED', currentLocationId: null },
+      });
+      await tx.tireMovement.create({
+        data: {
+          tireSetId: id,
+          type: 'CHECK_OUT',
+          fromLocationId: locked[0].currentLocationId,
+          employeeId: dto.employeeId ?? null,
+          at: now,
+        },
+      });
+    });
     return this.findOne(id);
   }
 

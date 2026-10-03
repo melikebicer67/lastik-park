@@ -245,6 +245,9 @@ async function main() {
     const finalLocation = relocated ?? location;
     if (relocated && location) freeLocations.unshift(location);
 
+    // Teslim edilmişlerde de bir zamanlar durduğu göz hareket kaydında görünsün
+    const pastLocation = location ?? pick(locations);
+
     const set = await prisma.tireSet.create({
       data: {
         code: `TMP-${created}`,
@@ -274,11 +277,13 @@ async function main() {
         },
         movements: {
           create: [
-            { type: 'CHECK_IN', toLocationId: location?.id ?? pick(locations).id, employeeId: checkInBy.id, at: checkInAt },
+            { type: 'CHECK_IN', toLocationId: pastLocation.id, employeeId: checkInBy.id, at: checkInAt },
             ...(relocated
               ? [{ type: 'RELOCATE' as const, fromLocationId: location!.id, toLocationId: relocated.id, employeeId: pick(employees).id, at: dateBetween(checkInAt, NOW), note: 'Raf düzenlemesi' }]
               : []),
-            ...(checkOutAt ? [{ type: 'CHECK_OUT' as const, employeeId: checkOutBy.id, at: checkOutAt }] : []),
+            ...(checkOutAt
+              ? [{ type: 'CHECK_OUT' as const, fromLocationId: pastLocation.id, employeeId: checkOutBy.id, at: checkOutAt }]
+              : []),
           ],
         },
       },

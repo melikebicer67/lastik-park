@@ -88,3 +88,6 @@ export function foldSearch(input: string) {
     .replace(/ç/g, "c")
     .replace(/[^a-z0-9]/g, "");
 }
+
+export const formatDate = (d: string | Date) => new Date(d).toLocaleDateString("tr-TR");
+export const formatMoney = (n: number) => `${n.toLocaleString("tr-TR")} ₺`;

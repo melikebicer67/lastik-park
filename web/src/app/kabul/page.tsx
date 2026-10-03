@@ -1,8 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { api, Customer, TireSetDetail } from "@/lib/api";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { EmployeeSelect } from "@/components/employee-select";
+import { api, Customer, Season, TireSetDetail } from "@/lib/api";
 import { parseTireSize } from "@/lib/tire";
 import { Field, Section } from "@/components/ui/section";
 import { errorBox, input, primaryButton } from "@/components/ui/styles";
@@ -36,17 +37,47 @@ function buildTires(form: TireSetForm) {
 }
 
 export default function CheckInPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-zinc-500">Yükleniyor…</p>}>
+      <CheckInForm />
+    </Suspense>
+  );
+}
+
+const SEASONS: Season[] = ["SUMMER", "WINTER", "ALL_SEASON"];
+
+function CheckInForm() {
   const router = useRouter();
+  // Teslim sonrası "araçtaki lastikleri depoya al": ?musteri=ID&arac=ID&mevsim=SUMMER
+  const params = useSearchParams();
+  const presetCustomer = Number(params.get("musteri")) || null;
+  const presetVehicle = Number(params.get("arac")) || null;
+  const presetSeason = SEASONS.find((s) => s === params.get("mevsim"));
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [vehicleId, setVehicleId] = useState<number | null>(null);
   const [mileageKm, setMileageKm] = useState("");
-  const [tireForm, setTireForm] = useState<TireSetForm>(initialTireSetForm);
+  const [tireForm, setTireForm] = useState<TireSetForm>(() => ({
+    ...initialTireSetForm(),
+    ...(presetSeason ? { season: presetSeason } : {}),
+  }));
+  const [employeeId, setEmployeeId] = useState<number | null>(null);
   const [location, setLocation] = useState<{ id: number | null; code?: string }>({ id: null });
   const [seasonLabel, setSeasonLabel] = useState("");
   const [price, setPrice] = useState("");
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!presetCustomer) return;
+    api<Customer>(`/customers/${presetCustomer}`)
+      .then((c) => {
+        setCustomer(c);
+        const v = c.vehicles.find((x) => x.id === presetVehicle) ?? (c.vehicles.length === 1 ? c.vehicles[0] : null);
+        setVehicleId(v?.id ?? null);
+      })
+      .catch((e: Error) => setError(e.message));
+  }, [presetCustomer, presetVehicle]);
 
   const selectCustomer = (c: Customer | null) => {
     setCustomer(c);
@@ -73,6 +104,7 @@ export default function CheckInPage() {
           hasHubcaps: tireForm.hasHubcaps,
           hasBolts: tireForm.hasBolts,
           locationId: location.id,
+          checkInById: employeeId ?? undefined,
           mileageKm: mileageKm ? Number(mileageKm) : undefined,
           seasonLabel: seasonLabel || undefined,
           price: price ? Number(price.replace(",", ".")) : undefined,
@@ -121,7 +153,10 @@ export default function CheckInPage() {
       </Section>
 
       <Section step={5} title="Ücret ve not" disabled={!customer}>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Field label="Teslim alan">
+            <EmployeeSelect value={employeeId} onChange={setEmployeeId} />
+          </Field>
           <Field label="Dönem" hint="İsteğe bağlı">
             <input value={seasonLabel} onChange={(e) => setSeasonLabel(e.target.value)} placeholder="2026 Yaz" className={input} />
           </Field>

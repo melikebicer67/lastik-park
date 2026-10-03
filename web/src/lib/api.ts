@@ -164,7 +164,10 @@ export interface TireSetDetail {
     price: string | null;
     checkInBy: { name: string } | null;
     checkOutBy: { name: string } | null;
+    paid: boolean;
+    note: string | null;
   }[];
+  movements: TireMovement[];
 }
 
 export type TireSetStatus = "IN_STORAGE" | "DELIVERED" | "DISPOSED";
@@ -197,4 +200,58 @@ export interface WarehouseMap {
     capacity: number;
     sets: { id: number; code: string; season: Season; customer: string; plate: string | null }[];
   }[];
+}
+
+export interface Employee {
+  id: number;
+  code: string | null;
+  name: string;
+}
+
+export interface TireMovement {
+  id: number;
+  type: "CHECK_IN" | "RELOCATE" | "CHECK_OUT";
+  at: string;
+  note: string | null;
+  fromLocation: { code: string } | null;
+  toLocation: { code: string } | null;
+  employee: { name: string } | null;
+}
+
+export interface CustomerHistoryItem {
+  stayId: number;
+  tireSetId: number;
+  code: string;
+  season: Season;
+  status: TireSetStatus;
+  rimType: RimType;
+  quantity: number;
+  plate: string | null;
+  tire: { brand: string; pattern: string | null; width: number; aspectRatio: number; rimDiameter: string } | null;
+  minTreadDepthMm: number | null;
+  location: string | null;
+  seasonLabel: string | null;
+  checkInAt: string;
+  checkOutAt: string | null;
+  days: number;
+  mileageKm: number | null;
+  price: number | null;
+  paid: boolean;
+  checkInBy: string | null;
+  checkOutBy: string | null;
+  note: string | null;
+}
+
+export interface CustomerHistory {
+  customer: { id: number; logoCode: string | null; name: string; phone: string | null; email: string | null; city: string | null; createdAt: string };
+  vehicles: { id: number; plate: string; brand: string | null; model: string | null }[];
+  summary: {
+    stays: number;
+    inStorage: number;
+    firstCheckInAt: string | null;
+    avgDays: number | null;
+    totalBilled: number;
+    unpaid: number;
+  };
+  items: CustomerHistoryItem[];
 }

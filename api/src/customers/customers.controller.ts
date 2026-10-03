@@ -10,6 +10,11 @@ export class CustomersController {
     return this.customers.importFromLogo(logoRef);
   }
 
+  @Get(':id/history')
+  history(@Param('id', ParseIntPipe) id: number) {
+    return this.customers.history(id);
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.customers.findOne(id);

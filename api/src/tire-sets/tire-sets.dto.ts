@@ -109,6 +109,11 @@ export class CheckInDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
+  checkInById?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   @Min(0)
   mileageKm?: number;
 
@@ -158,4 +163,26 @@ export class TireSetQueryDto {
   @Min(1)
   @Max(500)
   pageSize = 25;
+}
+
+export class CheckOutDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  employeeId?: number;
+
+  // Kabulde ücret girilmemişse teslimde girilebilir
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  price?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  paid?: boolean;
+
+  @IsOptional()
+  @IsString()
+  note?: string;
 }

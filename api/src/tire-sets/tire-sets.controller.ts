@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
-import { CheckInDto, TireSetQueryDto } from './tire-sets.dto.js';
+import { CheckInDto, CheckOutDto, TireSetQueryDto } from './tire-sets.dto.js';
 import { TireSetsService } from './tire-sets.service.js';
 
 @Controller('tire-sets')
@@ -9,6 +9,11 @@ export class TireSetsController {
   @Post('check-in')
   checkIn(@Body() dto: CheckInDto) {
     return this.tireSets.checkIn(dto);
+  }
+
+  @Post(':id/check-out')
+  checkOut(@Param('id', ParseIntPipe) id: number, @Body() dto: CheckOutDto) {
+    return this.tireSets.checkOut(id, dto);
   }
 
   @Get()

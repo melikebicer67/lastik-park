@@ -48,6 +48,8 @@ http://localhost:3000 adresinden açılır.
 
 - **Lastik Bul** (`/lastikler`, açılış sayfası): plaka, müşteri, telefon, marka, göz veya etiket no ile arama; durum/mevsim filtresi. Her satırda takımın bulunduğu göz. Etiket numarası yazılıp Enter'a basılınca (el tipi barkod okuyucu da böyle çalışır) doğrudan takıma gider. **QR okut** kamerayla okur (HTTPS veya localhost gerekir).
 - **Lastik Kabul** (`/kabul`): müşteri (LOGO'dan) → araç → lastikler → depo gözü → ücret. Kayıt sonrası QR kodlu etiket sayfasına gider.
+- **Lastik Teslim** (`/teslim`): QR/etiket no/plaka ile takımı bul → raftan alınacak göz, kabul tarihi ve depoda kalma süresi büyük gösterilir → ek parça kontrolü, tahsilat, teslim eden personel → teslim. Ekranda müşterinin geçmişi de görünür. Sonrasında "araçtaki lastikleri depoya al" ile sezon değişimi için kabul ekranı müşteri, araç ve mevsim seçili açılır.
+- **Müşteri geçmişi** (`/musteri/:id`): tüm kabul/teslim kayıtları, süreler, gözler, ücret ve ödeme durumu, personel; özet ve A4 yazdırma.
 - **Depo** (`/depo`): koridor/raf/kat haritası, mevsime göre renkli; doluluk özeti; haritada plaka/müşteri vurgulama. `?goz=B-04-2` ile gözü işaretler.
 - **Takım detayı** (`/takim/:id`): lastikler, konaklama, teslim alan personel, etiket, "Depoda göster".
 - **Etiketler** (`/etiketler`): depodaki tüm takımların etiketleri; yazdırınca her biri ayrı 100×60 mm sayfa.
@@ -88,4 +90,7 @@ Notlar:
 | GET | `/api/tire-sets?search=&status=&season=&page=&pageSize=` | Lastik takımı arama |
 | GET | `/api/tire-sets/by-code/:code` | Etiket (QR) numarasından takım |
 | POST | `/api/tire-sets/check-in` | Lastik kabulü |
+| POST | `/api/tire-sets/:id/check-out` | Lastik teslimi |
+| GET | `/api/customers/:id/history` | Müşteri geçmişi raporu |
+| GET | `/api/employees` | Personel listesi (işlemi yapan seçimi) |
 | GET | `/api/tire-sets/:id` | Takım detayı |

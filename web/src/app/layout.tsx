@@ -27,6 +27,7 @@ export const metadata: Metadata = {
 const NAV = [
   { href: "/lastikler", label: "Lastik Bul" },
   { href: "/kabul", label: "Lastik Kabul" },
+  { href: "/teslim", label: "Lastik Teslim" },
   { href: "/depo", label: "Depo" },
   { href: "/musteriler", label: "Müşteriler" },
   { href: "/personel", label: "Personel" },

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, TireSetDetail } from "@/lib/api";
-import { CONDITION_LABELS, POSITION_LABELS, RIM_LABELS, SEASON_LABELS, STATUS_LABELS, formatPlate, formatTireSize } from "@/lib/tire";
+import { CONDITION_LABELS, POSITION_LABELS, RIM_LABELS, SEASON_LABELS, STATUS_LABELS, daysSince, formatDate, formatPlate, formatTireSize } from "@/lib/tire";
 import { errorBox, primaryButton, secondaryButton } from "@/components/ui/styles";
 import { labelFromDetail, TireSetLabel } from "@/components/tire-set-label";
 
@@ -38,6 +38,16 @@ export default function TireSetPage() {
           <h1 className="font-mono text-xl font-semibold">{set.code}</h1>
           <p className="text-sm text-zinc-500">
             {STATUS_LABELS[set.status]} · {set.currentLocation ? `${set.currentLocation.warehouse.name} / ${set.currentLocation.code}` : "Gözde değil"}
+            {stay && (
+              <>
+                {" · "}Kabul {formatDate(stay.checkInAt)}
+                {stay.checkOutAt ? (
+                  ` · ${daysBetween(stay.checkInAt, stay.checkOutAt)} gün kaldı`
+                ) : (
+                  <b className="text-zinc-900 dark:text-zinc-100"> · {daysSince(stay.checkInAt)} gündür depoda</b>
+                )}
+              </>
+            )}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -49,9 +59,14 @@ export default function TireSetPage() {
           <Link href="/kabul" className={secondaryButton}>
             Yeni kabul
           </Link>
-          <button type="button" onClick={() => window.print()} className={primaryButton}>
+          <button type="button" onClick={() => window.print()} className={set.status === "IN_STORAGE" ? secondaryButton : primaryButton}>
             Etiketi yazdır
           </button>
+          {set.status === "IN_STORAGE" && (
+            <Link href={`/teslim?takim=${set.id}`} className={primaryButton}>
+              Teslim et
+            </Link>
+          )}
         </div>
       </div>
 
@@ -59,7 +74,9 @@ export default function TireSetPage() {
 
       <div className="grid gap-4 md:grid-cols-2 print:hidden">
         <Info title="Müşteri">
-          <div className="font-medium">{set.customer.name}</div>
+          <Link href={`/musteri/${set.customer.id}`} className="font-medium hover:text-brand">
+            {set.customer.name} <span className="text-xs font-semibold text-brand">Geçmiş →</span>
+          </Link>
           <div className="text-zinc-500">{[set.customer.logoCode, set.customer.phone].filter(Boolean).join(" · ")}</div>
           {set.vehicle && (
             <div className="mt-2 font-mono">
@@ -119,9 +136,34 @@ export default function TireSetPage() {
           </tbody>
         </table>
       </div>
+
+      {set.movements.length > 0 && (
+        <div className="space-y-2 print:hidden">
+          <h2 className="font-semibold">Hareket geçmişi</h2>
+          <ol className="space-y-1 text-sm">
+            {set.movements.map((m) => (
+              <li key={m.id} className="flex flex-wrap gap-x-3 border-l-2 border-brand/40 pl-3">
+                <span className="w-36 text-zinc-500">{new Date(m.at).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" })}</span>
+                <span className="font-medium">{MOVEMENT_LABELS[m.type]}</span>
+                <span className="font-mono">
+                  {m.fromLocation?.code}
+                  {m.fromLocation && m.toLocation ? " → " : ""}
+                  {m.toLocation?.code}
+                </span>
+                {m.employee && <span className="text-zinc-500">{m.employee.name}</span>}
+                {m.note && <span className="text-zinc-500">· {m.note}</span>}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
     </div>
   );
 }
+
+const MOVEMENT_LABELS = { CHECK_IN: "Depoya giriş", RELOCATE: "Göz değişikliği", CHECK_OUT: "Teslim" } as const;
+
+const daysBetween = (a: string, b: string) => Math.floor((new Date(b).getTime() - new Date(a).getTime()) / 864e5);
 
 function Info({ title, children }: { title: string; children: React.ReactNode }) {
   return (

@@ -197,11 +197,12 @@ function Row({ item: t }: { item: TireSetListItem }) {
       <div className="hidden shrink-0 flex-col items-end justify-between sm:flex">
         <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${SEASON_STYLES[t.season]}`}>{SEASON_LABELS[t.season]}</span>
         <span className="text-xs text-zinc-500">
+          Kabul {new Date(t.checkInAt).toLocaleDateString("tr-TR")} ·{" "}
           {inStorage
             ? days === 0
-              ? "Bugün geldi"
-              : `${days} gündür depoda`
-            : `Teslim ${t.checkOutAt ? new Date(t.checkOutAt).toLocaleDateString("tr-TR") : ""}`}
+              ? "bugün geldi"
+              : <b className="text-zinc-700 dark:text-zinc-300">{days} gündür depoda</b>
+            : `teslim ${t.checkOutAt ? new Date(t.checkOutAt).toLocaleDateString("tr-TR") : ""}`}
         </span>
       </div>
     </Link>
