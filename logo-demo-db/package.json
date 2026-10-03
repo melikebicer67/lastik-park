@@ -1,0 +1,13 @@
+{
+  "name": "logo-demo-db",
+  "private": true,
+  "type": "module",
+  "description": "LOGO Tiger/Go tablo yapısını taklit eden sahte veritabanı",
+  "scripts": {
+    "seed": "node --env-file-if-exists=.env seed.mjs"
+  },
+  "dependencies": {
+    "@faker-js/faker": "^10.6.0",
+    "mssql": "^12.7.2"
+  }
+}

@@ -1,0 +1,31 @@
+# Geliştirme ortamı: uygulama veritabanı + sahte LOGO SQL Server'ı
+# Çalıştırma: podman-compose up -d   (veya docker compose up -d)
+services:
+  postgres:
+    image: docker.io/library/postgres:17
+    container_name: lastikpark-postgres
+    environment:
+      POSTGRES_USER: lastikpark
+      POSTGRES_PASSWORD: lastikpark
+      POSTGRES_DB: lastikpark
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  logo-mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: lastikpark-logo-mssql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Logo.Demo.2026"
+      MSSQL_PID: Developer
+      MSSQL_COLLATION: Turkish_CI_AS
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssqldata:/var/opt/mssql
+
+volumes:
+  pgdata:
+  mssqldata:

@@ -1,0 +1,24 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// LOGO bağlantı ayarları (tek satır, id = 1). Şifre AES-256-GCM ile şifreli saklanır.
+model LogoSettings {
+  id                Int      @id @default(1)
+  server            String
+  port              Int      @default(1433)
+  database          String
+  user              String
+  passwordEncrypted String
+  firmNo            String   @default("001")
+  periodNo          String   @default("01")
+  encrypt           Boolean  @default(false)
+  updatedAt         DateTime @updatedAt
+}
