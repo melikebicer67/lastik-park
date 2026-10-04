@@ -80,6 +80,7 @@ model Employee {
   checkIns  Stay[]         @relation("StayCheckIn")
   checkOuts Stay[]         @relation("StayCheckOut")
   movements TireMovement[]
+  purchases Purchase[]
 
   @@unique([source, logoRef])
 }
@@ -350,4 +351,67 @@ model Appointment {
   createdAt   DateTime          @default(now())
 
   @@index([scheduledAt])
+}
+
+// ── Satın alma ───────────────────────────────────────────────
+// Bayinin satış için aldığı lastikler. Ana bayiden (LastikPark) ve dış tedarikçilerden yapılan alımlar
+// ayrı izlenir: oran, fiyat karşılaştırması, marka/ebat dağılımı. Uygulamada girilir (LOGO'dan okunmaz).
+
+enum SupplierType {
+  MAIN_DEALER // LastikPark ana bayi
+  EXTERNAL // dış tedarikçi
+}
+
+model Supplier {
+  id          Int          @id @default(autoincrement())
+  name        String
+  type        SupplierType @default(EXTERNAL)
+  taxNr       String?
+  phone       String?
+  contactName String?
+  city        String?
+  note        String?
+  active      Boolean      @default(true)
+  searchKey   String       @default("")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  purchases Purchase[]
+}
+
+model Purchase {
+  id           Int       @id @default(autoincrement())
+  supplierId   Int
+  supplier     Supplier  @relation(fields: [supplierId], references: [id])
+  purchaseDate DateTime  @db.Date
+  documentNo   String? // fatura / irsaliye no
+  note         String?
+  createdById  Int?
+  createdBy    Employee? @relation(fields: [createdById], references: [id])
+  createdAt    DateTime  @default(now())
+
+  lines PurchaseLine[]
+
+  @@index([purchaseDate])
+  @@index([supplierId])
+}
+
+model PurchaseLine {
+  id          Int      @id @default(autoincrement())
+  purchaseId  Int
+  purchase    Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  brand       String
+  pattern     String?
+  season      Season
+  width       Int
+  aspectRatio Int
+  rimDiameter Decimal  @db.Decimal(4, 1)
+  loadIndex   Int?
+  speedIndex  String?
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(12, 2) // KDV hariç
+  vatRate     Int      @default(20)
+
+  @@index([purchaseId])
+  @@index([brand])
 }

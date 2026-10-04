@@ -35,7 +35,7 @@ cd api && cp .env.example .env && npm install && npm run db:migrate && npm run d
 # 4. Ön yüz
 cd web && cp .env.example .env.local && npm install && cd ..
 
-# (İsteğe bağlı) Demo verisi: 110 müşteri, 160 araç, ~150 lastik takımı. Müşteri/lastik tablolarını sıfırlar!
+# (İsteğe bağlı) Demo verisi: 110 müşteri, 160 araç, ~150 lastik takımı, 6 tedarikçi, 12 aylık alım. Müşteri/lastik/alım tablolarını sıfırlar!
 cd api && npm run db:demo && cd ..
 
 # 5. Hepsini birlikte çalıştır (kök dizinde)
@@ -50,6 +50,10 @@ http://localhost:3000 adresinden açılır.
 - **Lastik Kabul** (`/kabul`): müşteri (LOGO'dan) → araç → lastikler → depo gözü → ücret. Kayıt sonrası QR kodlu etiket sayfasına gider.
 - **Lastik Teslim** (`/teslim`): QR/etiket no/plaka ile takımı bul → raftan alınacak göz, kabul tarihi ve depoda kalma süresi büyük gösterilir → ek parça kontrolü, tahsilat, teslim eden personel → teslim. Ekranda müşterinin geçmişi de görünür. Sonrasında "araçtaki lastikleri depoya al" ile sezon değişimi için kabul ekranı müşteri, araç ve mevsim seçili açılır.
 - **Müşteri geçmişi** (`/musteri/:id`): tüm kabul/teslim kayıtları, süreler, gözler, ücret ve ödeme durumu, personel; özet ve A4 yazdırma.
+- **Satın Alma** (`/satinalma`): ana bayiden ve dış tedarikçilerden yapılan alımlar (uygulamada girilir).
+  - *Rapor*: ana bayi payı, aylık alım (tutar/adet), marka ve ebat dağılımı, aynı marka/ebatta ana bayi–dış fiyat karşılaştırması, tedarikçi payları.
+  - *Alımlar*: tarih/tür/tedarikçi/metin filtresi, alım detayı ve silme. *Yeni alım*: çok satırlı giriş, KDV, hızlı tedarikçi ekleme.
+  - *Tedarikçiler*: ana bayi / dış tedarikçi, alım sayısı ve toplamları.
 - **Depo** (`/depo`): koridor/raf/kat haritası, mevsime göre renkli; doluluk özeti; haritada plaka/müşteri vurgulama. `?goz=B-04-2` ile gözü işaretler.
 - **Takım detayı** (`/takim/:id`): lastikler, konaklama, teslim alan personel, etiket, "Depoda göster".
 - **Etiketler** (`/etiketler`): depodaki tüm takımların etiketleri; yazdırınca her biri ayrı 100×60 mm sayfa.
@@ -93,4 +97,8 @@ Notlar:
 | POST | `/api/tire-sets/:id/check-out` | Lastik teslimi |
 | GET | `/api/customers/:id/history` | Müşteri geçmişi raporu |
 | GET | `/api/employees` | Personel listesi (işlemi yapan seçimi) |
+| GET/POST/PUT | `/api/suppliers` | Tedarikçiler |
+| GET/POST | `/api/purchases` | Alımlar (filtre: from, to, type, supplierId, search) |
+| GET/DELETE | `/api/purchases/:id` | Alım detayı / silme |
+| GET | `/api/purchases/report?from=&to=` | Satın alma raporu |
 | GET | `/api/tire-sets/:id` | Takım detayı |

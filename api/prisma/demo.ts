@@ -5,7 +5,7 @@ import 'dotenv/config';
 import { fakerTR as faker } from '@faker-js/faker';
 import { PrismaPg } from '@prisma/adapter-pg';
 import sql from 'mssql';
-import { customerSearchKey } from '../src/common/search.js';
+import { customerSearchKey, foldSearch } from '../src/common/search.js';
 import type { RimType, Season, TireCondition, TirePosition } from '../src/generated/prisma/enums.js';
 import { PrismaClient } from '../src/generated/prisma/client.js';
 import type { Employee, Vehicle } from '../src/generated/prisma/client.js';
@@ -154,13 +154,110 @@ async function loadLogo() {
   return { customers: customers.recordset, salesmen: salesmen.recordset };
 }
 
+
+// ── Satın alma demo verisi ──
+
+// 2026 fiyat seviyesi, KDV hariç birim fiyat: jant çapına göre taban × marka katsayısı
+const RIM_BASE: Record<number, number> = { 14: 2600, 15: 3000, 16: 3800, 17: 4800, 18: 6000, 19: 7200 };
+const BRAND_FACTOR: Record<string, number> = {
+  Petlas: 0.8, Lassa: 0.85, Hankook: 1.0, Bridgestone: 1.15, Goodyear: 1.15, Continental: 1.3, Pirelli: 1.35, Michelin: 1.45,
+};
+const SUPPLIERS = [
+  { name: 'LastikPark Genel Merkez', type: 'MAIN_DEALER' as const, city: 'İstanbul', contactName: 'Bayi Destek', weight: 0 },
+  { name: 'Karadeniz Lastik Toptan Ltd. Şti.', type: 'EXTERNAL' as const, city: 'Zonguldak', contactName: 'Murat Bey', weight: 4, factor: 0.93 },
+  { name: 'Bolu Lastik Dağıtım A.Ş.', type: 'EXTERNAL' as const, city: 'Bolu', contactName: 'Satış', weight: 3, factor: 0.96 },
+  { name: 'Kocaeli Oto Lastik San. Tic.', type: 'EXTERNAL' as const, city: 'Kocaeli', contactName: 'Ayşe Hanım', weight: 2, factor: 1.02 },
+  { name: 'Ereğli Oto Yedek Parça', type: 'EXTERNAL' as const, city: 'Zonguldak', contactName: 'Hasan Usta', weight: 1, factor: 1.06 },
+  { name: 'Anadolu Lastik İthalat', type: 'EXTERNAL' as const, city: 'Ankara', contactName: 'İthalat Birimi', weight: 1, factor: 0.9 },
+];
+// Ay bazında alım yoğunluğu (Ocak=0): kışlık için Eki-Kas, yazlık için Mar-Nis zirve
+const MONTH_WEIGHT = [2, 2, 5, 6, 3, 2, 1, 2, 4, 7, 6, 3];
+
+async function createPurchases(employees: Employee[]) {
+  const suppliers = [];
+  for (const s of SUPPLIERS) {
+    suppliers.push({
+      ...s,
+      row: await prisma.supplier.create({
+        data: {
+          name: s.name,
+          type: s.type,
+          city: s.city,
+          contactName: s.contactName,
+          phone: `0${pick(['212', '372', '374', '262', '312'])} ${faker.string.numeric(3)} ${faker.string.numeric(2)} ${faker.string.numeric(2)}`,
+          taxNr: faker.string.numeric({ length: 10, allowLeadingZeros: false }),
+          searchKey: foldSearch(`${s.name}${s.city}${s.contactName}`),
+        },
+      }),
+    });
+  }
+  const main = suppliers[0];
+  const external = suppliers.slice(1);
+  const sizes = [...new Set(CARS.flatMap((c) => c.sizes))];
+
+  let count = 0;
+  for (let back = 11; back >= 0; back--) {
+    const month = new Date(NOW.getFullYear(), NOW.getMonth() - back, 1);
+    const purchasesThisMonth = MONTH_WEIGHT[month.getMonth()] + faker.number.int({ min: 0, max: 2 });
+    // Yoğun sezonda ana bayide stok bitince dışarıdan alım artar
+    const peak = MONTH_WEIGHT[month.getMonth()] >= 5;
+    const externalCount = Math.round(purchasesThisMonth * (peak ? 0.4 : 0.25));
+    const externalSlots = new Set(faker.helpers.arrayElements([...Array(purchasesThisMonth).keys()], externalCount));
+    for (let i = 0; i < purchasesThisMonth; i++) {
+      const isExternal = externalSlots.has(i);
+      const supplier = isExternal
+        ? faker.helpers.weightedArrayElement(external.map((s) => ({ value: s, weight: s.weight })))
+        : main;
+      const last = back === 0 ? NOW.getDate() : new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+      const date = new Date(Date.UTC(month.getFullYear(), month.getMonth(), faker.number.int({ min: 1, max: last })));
+      const season: Season = [9, 10, 11, 0].includes(month.getMonth())
+        ? faker.helpers.weightedArrayElement([{ value: 'WINTER', weight: 7 }, { value: 'ALL_SEASON', weight: 1 }, { value: 'SUMMER', weight: 1 }])
+        : faker.helpers.weightedArrayElement([{ value: 'SUMMER', weight: 7 }, { value: 'ALL_SEASON', weight: 1 }, { value: 'WINTER', weight: 1 }]);
+      const lineCount = isExternal ? faker.number.int({ min: 1, max: 3 }) : faker.number.int({ min: 2, max: 4 });
+      const used = new Set<string>();
+      const lines = [];
+      for (let j = 0; j < lineCount; j++) {
+        const { brand, pattern } = pick(PATTERNS[season]);
+        const size = pick(sizes);
+        if (used.has(brand + size)) continue;
+        used.add(brand + size);
+        const p = parseSize(size);
+        const base = RIM_BASE[p.rimDiameter] * BRAND_FACTOR[brand];
+        // Fiyat yıl içinde ~%25 artar; dış tedarikçi kendi katsayısı ± oynama
+        const inflation = 1 + 0.25 * ((11 - back) / 11);
+        const factor = 'factor' in supplier ? supplier.factor! * faker.number.float({ min: 0.96, max: 1.05 }) : faker.number.float({ min: 0.99, max: 1.01 });
+        lines.push({
+          brand,
+          pattern,
+          season,
+          ...p,
+          quantity: isExternal ? pick([4, 8, 8, 12, 16, 20]) : pick([4, 8, 8, 12, 16, 20, 24]),
+          unitPrice: Math.round((base * inflation * factor) / 10) * 10,
+          vatRate: 20,
+        });
+      }
+      await prisma.purchase.create({
+        data: {
+          supplierId: supplier.row.id,
+          purchaseDate: date,
+          documentNo: `${isExternal ? 'DF' : 'LPF'}${date.getUTCFullYear()}${String(faker.number.int({ min: 1, max: 999999 })).padStart(6, '0')}`,
+          createdById: pick(employees).id,
+          lines: { create: lines },
+        },
+      });
+      count++;
+    }
+  }
+  return { suppliers: suppliers.length, purchases: count };
+}
+
 async function main() {
   const t = (v: unknown) => (typeof v === 'string' ? v.trim() : '') || null;
   const logo = await loadLogo();
   const locations = await prisma.storageLocation.findMany({ where: { active: true }, orderBy: { code: 'asc' } });
   if (locations.length === 0) throw new Error('Önce depo tanımlanmalı: npm run db:seed');
 
-  await prisma.$executeRawUnsafe(`TRUNCATE "TirePhoto", "TireMovement", "Stay", "Tire", "Appointment", "TireSet",
+  await prisma.$executeRawUnsafe(`TRUNCATE "PurchaseLine", "Purchase", "Supplier", "TirePhoto", "TireMovement", "Stay", "Tire", "Appointment", "TireSet",
     "Vehicle", "Customer", "User", "Employee" RESTART IDENTITY CASCADE`);
 
   // Personel: LOGO satış elemanlarından
@@ -334,11 +431,12 @@ async function main() {
     });
   }
 
+  const purchasing = await createPurchases(employees);
   const inStorage = await prisma.tireSet.count({ where: { status: 'IN_STORAGE' } });
   console.log(
     `✓ ${employees.length} personel, ${customers.length} müşteri, ${vehicles.length} araç, ` +
       `${created} lastik takımı (${inStorage} depoda, ${created - inStorage} teslim edilmiş). ` +
-      `Doluluk: ${inStorage}/${locations.length} göz`,
+      `Doluluk: ${inStorage}/${locations.length} göz. ${purchasing.suppliers} tedarikçi, ${purchasing.purchases} alım.`,
   );
 }
 

@@ -4,6 +4,10 @@
 :root {
   --background: #ffffff;
   --foreground: #1a1a1a;
+  /* Grafik serileri (renk körlüğü testinden geçti): ana bayi / dış alım */
+  --series-main: #2a78d6;
+  --series-external: #eb6834;
+  --chart-grid: #e7e5e4;
 }
 
 @theme inline {
@@ -14,6 +18,9 @@
   --color-brand-dark: #b8040e; /* hover */
   --color-ink: #252525; /* bayi paneli antrasiti */
   --color-mist: #ededed;
+  --color-series-main: var(--series-main);
+  --color-series-external: var(--series-external);
+  --color-chart-grid: var(--chart-grid);
   --font-sans: var(--font-montserrat);
   --font-mono: var(--font-geist-mono);
 }
@@ -22,6 +29,9 @@
   :root {
     --background: #121212;
     --foreground: #ededed;
+    --series-main: #3987e5;
+    --series-external: #d95926;
+    --chart-grid: #2e2e2c;
   }
 }
 

@@ -29,6 +29,7 @@ const NAV = [
   { href: "/kabul", label: "Lastik Kabul" },
   { href: "/teslim", label: "Lastik Teslim" },
   { href: "/depo", label: "Depo" },
+  { href: "/satinalma", label: "Satın Alma" },
   { href: "/musteriler", label: "Müşteriler" },
   { href: "/personel", label: "Personel" },
   { href: "/ayarlar/logo", label: "LOGO Ayarları" },
